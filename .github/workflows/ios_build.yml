@@ -1,4 +1,4 @@
-name: iPad IPA Builder (Path Fix)
+name: iPad IPA Builder (Final Path Fix)
 on:
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
 
       - name: Create Fake GoogleService-Info.plist
         run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
+          printf '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform ios
@@ -29,12 +29,15 @@ jobs:
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # ios klasörüne girip tam dosya adını bularak build başlatıyoruz
+          # ios klasöründeki dosyaları garantiye alıyoruz
           cd ios
-          WORKSPACE_NAME=$(ls | grep .xcworkspace)
-          SCHEME_NAME=$(ls | grep .xcodeproj | cut -d. -f1)
+          WORKSPACE_PATH=$(find . -name "*.xcworkspace" -maxdepth 1)
+          SCHEME_NAME=$(basename "$WORKSPACE_PATH" .xcworkspace)
           
-          xcodebuild -workspace "$WORKSPACE_NAME" \
+          echo "Workspace bulundu: $WORKSPACE_PATH"
+          echo "Scheme bulundu: $SCHEME_NAME"
+
+          xcodebuild -workspace "$WORKSPACE_PATH" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
             -sdk iphonesimulator \
@@ -44,7 +47,6 @@ jobs:
           cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
           zip -r DepTime.ipa Payload
           
-       Maryland-Upload-Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
