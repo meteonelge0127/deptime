@@ -23,42 +23,33 @@ jobs:
         run: |
           printf '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
 
-      - name: 5. iOS Projesini Olustur
-        run: npx expo prebuild --platform ios --no-install
+      - name: 5. iOS Projesini Olustur ve Podlari Kur
+        run: |
+          npx expo prebuild --platform ios
+          cd ios && pod install
 
       - name: 6. Xcode Build ve Paketleme
         run: |
           mkdir -p Payload
+          cd ios
           
-          # SADECE ios klasörü içindeki workspace'i bul (node_modules'a bakma!)
-          WORKSPACE_PATH=$(find ./ios -name "*.xcworkspace" -maxdepth 2 | head -n 1)
+          # Workspace ve Şema isimlerini belirle
+          WORKSPACE_FILE=$(ls -d *.xcworkspace | head -n 1)
+          # app.json içindeki name 'deprem-app' olsa da Xcode'da 'depremapp' olur
+          SCHEME_NAME="depremapp"
           
-          if [ -z "$WORKSPACE_PATH" ]; then
-            echo "HATA: ios klasöründe .xcworkspace bulunamadı!"
-            ls -R ios
-            exit 1
-          fi
-
-          WORKSPACE_DIR=$(dirname "$WORKSPACE_PATH")
-          WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
-          
-          # Şema ismini otomatik tespit etmeye çalışalım
-          cd "$WORKSPACE_DIR"
-          SCHEME_NAME=$(xcodebuild -list -json | python3 -c "import sys, json; data = json.load(sys.stdin); print(data['project']['schemes'][0])" || echo "depremapp")
-          
-          echo "Bulunan Klasör: $WORKSPACE_DIR"
-          echo "Bulunan Workspace: $WORKSPACE_FILE"
-          echo "Seçilen Şema: $SCHEME_NAME"
+          echo "Build basliyor: $WORKSPACE_FILE - $SCHEME_NAME"
 
           xcodebuild -workspace "$WORKSPACE_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
             -sdk iphonesimulator \
-            -derivedDataPath ../../build \
+            -derivedDataPath ../build \
             -quiet
           
-          cd ../..
-          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          cd ..
+          # .app dosyasını bul ve IPA yap
+          APP_PATH=$(find build/Build/Products/Debug-iphonesimulator -name "*.app" -type d | head -n 1)
           cp -r "$APP_PATH" Payload/
           zip -r DepTime.ipa Payload
 
