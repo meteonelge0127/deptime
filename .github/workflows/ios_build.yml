@@ -29,18 +29,22 @@ jobs:
       - name: 6. Xcode Build ve Paketleme
         run: |
           mkdir -p Payload
-          WORKSPACE_PATH=$(find . -name "*.xcworkspace" | head -n 1)
-          if [ -z "$WORKSPACE_PATH" ]; then echo "HATA: Workspace bulunamadi"; exit 1; fi
+          cd ios
           
-          cd "$(dirname "$WORKSPACE_PATH")"
-          WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
-          SCHEME_NAME=$(basename "$WORKSPACE_FILE" .xcworkspace)
+          # Workspace dosyasını bul (Hatalı kütüphaneleri elemek için derin arama)
+          WORKSPACE_FILE=$(ls -d *.xcworkspace | grep -v "Pods" | head -n 1)
+          # Şema ismini app.json'daki 'name' değeriyle eşliyoruz
+          SCHEME_NAME="depremapp" 
           
+          echo "Kullanilan Workspace: $WORKSPACE_FILE"
+          echo "Kullanilan Scheme: $SCHEME_NAME"
+
           xcodebuild -workspace "$WORKSPACE_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
             -sdk iphonesimulator \
-            -derivedDataPath ../build
+            -derivedDataPath ../build \
+            -quiet
           
           cd ..
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
