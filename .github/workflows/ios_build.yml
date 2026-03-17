@@ -1,4 +1,4 @@
-name: iPad IPA Builder (Firebase Fix)
+name: iPad IPA Builder (Path Fix)
 on:
   workflow_dispatch:
 
@@ -21,7 +21,6 @@ jobs:
 
       - name: Create Fake GoogleService-Info.plist
         run: |
-          # Firebase eklentisinin prebuild sırasında hata vermemesi için sahte dosya oluşturuyoruz
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
 
       - name: Expo Prebuild
@@ -30,11 +29,22 @@ jobs:
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # Sideloadly için debug simülatör build'i oluşturuyoruz
-          xcodebuild -workspace ios/*.xcworkspace -scheme $(ls ios | grep .xcodeproj | cut -d. -f1) -configuration Debug -sdk iphonesimulator -derivedDataPath build
+          # ios klasörüne girip tam dosya adını bularak build başlatıyoruz
+          cd ios
+          WORKSPACE_NAME=$(ls | grep .xcworkspace)
+          SCHEME_NAME=$(ls | grep .xcodeproj | cut -d. -f1)
+          
+          xcodebuild -workspace "$WORKSPACE_NAME" \
+            -scheme "$SCHEME_NAME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath ../build
+          
+          cd ..
           cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
           zip -r DepTime.ipa Payload
           
+       Maryland-Upload-Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
