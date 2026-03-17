@@ -1,4 +1,4 @@
-name: iPad IPA Builder (Final Path Fix)
+name: iPad IPA Builder (Deep Search Fix)
 on:
   workflow_dispatch:
 
@@ -29,24 +29,37 @@ jobs:
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # ios klasöründeki dosyaları garantiye alıyoruz
-          cd ios
-          WORKSPACE_PATH=$(find . -name "*.xcworkspace" -maxdepth 1)
-          SCHEME_NAME=$(basename "$WORKSPACE_PATH" .xcworkspace)
+          # Projenin neresinde olursa olsun .xcworkspace dosyasını bul
+          WORKSPACE_PATH=$(find . -name "*.xcworkspace" | head -n 1)
           
-          echo "Workspace bulundu: $WORKSPACE_PATH"
-          echo "Scheme bulundu: $SCHEME_NAME"
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "HATA: .xcworkspace dosyası bulunamadı! Prebuild başarısız olmuş olabilir."
+            exit 1
+          fi
 
-          xcodebuild -workspace "$WORKSPACE_PATH" \
+          WORKSPACE_DIR=$(dirname "$WORKSPACE_PATH")
+          WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
+          SCHEME_NAME=$(basename "$WORKSPACE_FILE" .xcworkspace)
+          
+          echo "Klasör: $WORKSPACE_DIR"
+          echo "Dosya: $WORKSPACE_FILE"
+          echo "Şema: $SCHEME_NAME"
+
+          cd "$WORKSPACE_DIR"
+          
+          xcodebuild -workspace "$WORKSPACE_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
             -sdk iphonesimulator \
             -derivedDataPath ../build
           
           cd ..
-          cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
+          # .app dosyasını kopyala
+          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          cp -r "$APP_PATH" Payload/
           zip -r DepTime.ipa Payload
           
+       Maryland-Upload-Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
