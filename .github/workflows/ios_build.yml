@@ -1,16 +1,16 @@
-name: iPad IPA Builder (Windows Friendly)
+name: iPad IPA Builder (v4 Update)
 on:
-  workflow_dispatch: # Manuel başlatmak için
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # v4'e güncellendi
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4 # v4'e güncellendi
         with:
           node-version: 18
 
@@ -19,19 +19,20 @@ jobs:
           npm install -g expo-cli
           npm install
 
-      - name: Expo Prebuild (iOS Klasörünü Oluştur)
+      - name: Expo Prebuild
         run: npx expo prebuild --platform ios
 
-      - name: Export Payload (Sideloadly İçin Hazırlık)
+      - name: Build Payload
         run: |
           mkdir -p Payload
-          # .app dosyasını simülatör buildi olarak hazırla
+          # Simülatör buildi oluşturup Payload klasörüne paketliyoruz
           xcodebuild -workspace ios/*.xcworkspace -scheme $(ls ios | grep .xcodeproj | cut -d. -f1) -configuration Debug -sdk iphonesimulator -derivedDataPath build
           cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
           zip -r DepTime.ipa Payload
           
-      - name: Upload Artifact (IPA Dosyasını Al)
-        uses: actions/upload-artifact@v3
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4 # v4'e güncellendi (Hatanın çözümü burada)
         with:
           name: DepTime-iPad-Installer
           path: DepTime.ipa
+          retention-days: 1 # Yer kaplamaması için 1 gün sonra silinir
