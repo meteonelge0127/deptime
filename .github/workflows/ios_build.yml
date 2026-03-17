@@ -1,4 +1,4 @@
-name: iPad IPA Builder (Deep Search Fix)
+name: iPad IPA Builder (Deep Search & Diagnostic)
 on:
   workflow_dispatch:
 
@@ -24,29 +24,29 @@ jobs:
           printf '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
 
       - name: Expo Prebuild
-        run: npx expo prebuild --platform ios
+        run: |
+          npx expo prebuild --platform ios --no-install
+          echo "Prebuild sonrası klasör yapısı:"
+          ls -R
 
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # Projenin neresinde olursa olsun .xcworkspace dosyasını bul
+          # Tüm sistemde .xcworkspace dosyasını ara
           WORKSPACE_PATH=$(find . -name "*.xcworkspace" | head -n 1)
           
           if [ -z "$WORKSPACE_PATH" ]; then
-            echo "HATA: .xcworkspace dosyası bulunamadı! Prebuild başarısız olmuş olabilir."
+            echo "HATA: .xcworkspace hala bulunamadı. Prebuild klasörü oluşturmamış!"
             exit 1
           fi
 
-          WORKSPACE_DIR=$(dirname "$WORKSPACE_PATH")
+          echo "Bulunan Workspace: $WORKSPACE_PATH"
+          
+          # Workspace'in olduğu klasöre git
+          cd "$(dirname "$WORKSPACE_PATH")"
           WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
           SCHEME_NAME=$(basename "$WORKSPACE_FILE" .xcworkspace)
-          
-          echo "Klasör: $WORKSPACE_DIR"
-          echo "Dosya: $WORKSPACE_FILE"
-          echo "Şema: $SCHEME_NAME"
 
-          cd "$WORKSPACE_DIR"
-          
           xcodebuild -workspace "$WORKSPACE_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
@@ -54,7 +54,72 @@ jobs:
             -derivedDataPath ../build
           
           cd ..
-          # .app dosyasını kopyala
+          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          cp -r "$APP_PATH" Payload/
+          zip -r DepTime.ipa Payload
+          
+       Maryland-Upload-Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DepTime-iPad-Installer
+          path: DepTime.ipa
+          retention-days: 1name: iPad IPA Builder (Deep Search & Diagnostic)
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        run: |
+          npm install -g expo-cli
+          npm install
+
+      - name: Create Fake GoogleService-Info.plist
+        run: |
+          printf '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
+
+      - name: Expo Prebuild
+        run: |
+          npx expo prebuild --platform ios --no-install
+          echo "Prebuild sonrası klasör yapısı:"
+          ls -R
+
+      - name: Build Payload
+        run: |
+          mkdir -p Payload
+          # Tüm sistemde .xcworkspace dosyasını ara
+          WORKSPACE_PATH=$(find . -name "*.xcworkspace" | head -n 1)
+          
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "HATA: .xcworkspace hala bulunamadı. Prebuild klasörü oluşturmamış!"
+            exit 1
+          fi
+
+          echo "Bulunan Workspace: $WORKSPACE_PATH"
+          
+          # Workspace'in olduğu klasöre git
+          cd "$(dirname "$WORKSPACE_PATH")"
+          WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
+          SCHEME_NAME=$(basename "$WORKSPACE_FILE" .xcworkspace)
+
+          xcodebuild -workspace "$WORKSPACE_FILE" \
+            -scheme "$SCHEME_NAME" \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -derivedDataPath ../build
+          
+          cd ..
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
           cp -r "$APP_PATH" Payload/
           zip -r DepTime.ipa Payload
