@@ -29,24 +29,34 @@ jobs:
       - name: 6. Xcode Build ve Paketleme
         run: |
           mkdir -p Payload
-          cd ios
           
-          # Workspace dosyasını bul (Hatalı kütüphaneleri elemek için derin arama)
-          WORKSPACE_FILE=$(ls -d *.xcworkspace | grep -v "Pods" | head -n 1)
-          # Şema ismini app.json'daki 'name' değeriyle eşliyoruz
+          # Workspace dosyasını tüm alt klasörlerde ara (Pods hariç)
+          WORKSPACE_PATH=$(find . -name "*.xcworkspace" -not -path "*/Pods/*" | head -n 1)
+          
+          if [ -z "$WORKSPACE_PATH" ]; then
+            echo "HATA: Workspace dosyasi hicbir yerde bulunamadi!"
+            ls -R # Hata durumunda klasör yapısını dök
+            exit 1
+          fi
+
+          WORKSPACE_DIR=$(dirname "$WORKSPACE_PATH")
+          WORKSPACE_FILE=$(basename "$WORKSPACE_PATH")
+          # app.json içindeki scheme ismin 'depremapp'
           SCHEME_NAME="depremapp" 
           
-          echo "Kullanilan Workspace: $WORKSPACE_FILE"
-          echo "Kullanilan Scheme: $SCHEME_NAME"
+          echo "Bulunan Klasör: $WORKSPACE_DIR"
+          echo "Bulunan Dosya: $WORKSPACE_FILE"
 
+          cd "$WORKSPACE_DIR"
+          
           xcodebuild -workspace "$WORKSPACE_FILE" \
             -scheme "$SCHEME_NAME" \
             -configuration Debug \
             -sdk iphonesimulator \
-            -derivedDataPath ../build \
+            -derivedDataPath ../../build \
             -quiet
           
-          cd ..
+          cd ../..
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
           cp -r "$APP_PATH" Payload/
           zip -r DepTime.ipa Payload
