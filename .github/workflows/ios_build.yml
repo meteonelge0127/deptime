@@ -25,13 +25,13 @@ jobs:
 
       - name: 5. iOS Projesini Olustur ve Pod Ayarlarini Yap
         run: |
-          # Önce klasörleri oluştur
+          # Projeyi oluştur
           npx expo prebuild --platform ios --no-install
           
-          # Firebase'in istediği 'modular headers' ayarını Podfile'a enjekte et
-          sed -i '' "s/platform :ios, '15.1'/platform :ios, '15.1'\n  use_modular_headers\!/g" ios/Podfile
+          # Podfile'ın en başına 'use_modular_headers!' ekle
+          echo "use_modular_headers!" | cat - ios/Podfile > temp && mv temp ios/Podfile
           
-          # Şimdi kurulumu yap
+          # Podları kur
           cd ios && pod install
 
       - name: 6. Xcode Build ve Paketleme
