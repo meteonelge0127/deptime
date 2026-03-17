@@ -21,8 +21,8 @@ jobs:
 
       - name: Create Fake GoogleService-Info.plist
         run: |
-          # Firebase'in istediği o meşhur dosyayı sahte olarak oluşturuyoruz
-          echo "<?xml version='1.0' encoding='UTF-8'?><plist version='1.0'><dict><key>CLIENT_ID</key><string>test</string></dict></plist>" > GoogleService-Info.plist
+          # Firebase eklentisinin prebuild sırasında hata vermemesi için sahte dosya oluşturuyoruz
+          echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>CLIENT_ID</key><string>test</string></dict></plist>' > GoogleService-Info.plist
 
       - name: Expo Prebuild
         run: npx expo prebuild --platform ios
@@ -30,7 +30,7 @@ jobs:
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # Simülatör/Debug buildi Sideloadly için en uygunudur
+          # Sideloadly için debug simülatör build'i oluşturuyoruz
           xcodebuild -workspace ios/*.xcworkspace -scheme $(ls ios | grep .xcodeproj | cut -d. -f1) -configuration Debug -sdk iphonesimulator -derivedDataPath build
           cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
           zip -r DepTime.ipa Payload
