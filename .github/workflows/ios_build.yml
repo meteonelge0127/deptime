@@ -1,4 +1,4 @@
-name: iPad IPA Builder (v4 Update)
+name: iPad IPA Builder (Firebase Fix)
 on:
   workflow_dispatch:
 
@@ -7,10 +7,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4 # v4'e güncellendi
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4 # v4'e güncellendi
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
@@ -19,20 +19,25 @@ jobs:
           npm install -g expo-cli
           npm install
 
+      - name: Create Fake GoogleService-Info.plist
+        run: |
+          # Firebase'in istediği o meşhur dosyayı sahte olarak oluşturuyoruz
+          echo "<?xml version='1.0' encoding='UTF-8'?><plist version='1.0'><dict><key>CLIENT_ID</key><string>test</string></dict></plist>" > GoogleService-Info.plist
+
       - name: Expo Prebuild
         run: npx expo prebuild --platform ios
 
       - name: Build Payload
         run: |
           mkdir -p Payload
-          # Simülatör buildi oluşturup Payload klasörüne paketliyoruz
+          # Simülatör/Debug buildi Sideloadly için en uygunudur
           xcodebuild -workspace ios/*.xcworkspace -scheme $(ls ios | grep .xcodeproj | cut -d. -f1) -configuration Debug -sdk iphonesimulator -derivedDataPath build
           cp -r build/Build/Products/Debug-iphonesimulator/*.app Payload/
           zip -r DepTime.ipa Payload
           
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # v4'e güncellendi (Hatanın çözümü burada)
+        uses: actions/upload-artifact@v4
         with:
           name: DepTime-iPad-Installer
           path: DepTime.ipa
-          retention-days: 1 # Yer kaplamaması için 1 gün sonra silinir
+          retention-days: 1
